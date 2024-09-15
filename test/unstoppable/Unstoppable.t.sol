@@ -92,7 +92,29 @@ contract UnstoppableChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_unstoppable() public checkSolvedByPlayer {
-        
+        /*
+
+            Solution is a classic donation attack which inflates total asset balance (the underlying DVT token) 
+            without minting the appropriate amount of shares, causing the vault’s share price to drop.
+            
+            Therefore in our attack we transfer just 1 DVT token directly to the vault which causes 
+            the calculated shares of the total supply to be always offset from the totalAssets 
+            of the vault. 
+            
+            This prevents the flashLoan from being executed since the following requirement 
+            cannot be satisfied following the donation of 1 DVT to the vault:
+
+            convertToShares(totalSupply) != balanceBefore
+
+            A possible solution to this issue i to force deposits through the vault deposit function. This would
+            require customizing the DVT transfer function to blacklist direct transfers to the Vault.
+
+            Another possible solution is to keep track of total assets internally. This would require 
+            changing the implementation of the totalAssets function to use an internal variable instad of using 
+            asset.balanceOf(address(this)).
+
+        */
+        require(token.transfer(address(vault), 1)); 
     }
 
     /**
