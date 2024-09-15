@@ -106,7 +106,7 @@ contract UnstoppableChallenge is Test {
 
             convertToShares(totalSupply) != balanceBefore
 
-            A possible solution to this issue i to force deposits through the vault deposit function. This would
+            A possible solution to this issue is to force deposits through the vault deposit function. This would
             require customizing the DVT transfer function to blacklist direct transfers to the Vault.
 
             Another possible solution is to keep track of total assets internally. This would require 
