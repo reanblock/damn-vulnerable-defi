@@ -5,6 +5,7 @@ pragma solidity =0.8.25;
 import {Test, console} from "forge-std/Test.sol";
 import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 import {TrusterLenderPool} from "../../src/truster/TrusterLenderPool.sol";
+import {TrusterExploiter} from "./TrusterExploiter.sol";
 
 contract TrusterChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -51,7 +52,24 @@ contract TrusterChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_truster() public checkSolvedByPlayer {
-        
+        /*
+            The main issue is that flashLoan() function code of TrusterLenderPool contract 
+            is not following standard approach of flash loan implementation as it's not calling 
+            receiver's onFlashloan() function.
+
+            Instead, it gives freedom to user to call whatever function they want on whatever 
+            smart contract from TrusterLenderPool which is decided from provided data. 
+            which leaves some vulnerability.
+
+            In this function we simply deploy the TrusterExploiter and call the attack function, 
+            For details on the exploit please check the comments in the attack function.
+        */   
+
+        TrusterExploiter trusterExploiter = new TrusterExploiter(address(token), address(pool), address(recovery));
+
+        require(
+            trusterExploiter.attack()
+        );
     }
 
     /**
