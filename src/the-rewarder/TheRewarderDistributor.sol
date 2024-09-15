@@ -8,6 +8,8 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 
+// import {console} from "forge-std/Test.sol";
+
 struct Distribution {
     uint256 remaining;
     uint256 nextBatchNumber;
@@ -86,12 +88,17 @@ contract TheRewarderDistributor {
 
         for (uint256 i = 0; i < inputClaims.length; i++) {
             inputClaim = inputClaims[i];
+            // console.log("index: ",  i);
 
             uint256 wordPosition = inputClaim.batchNumber / 256;
             uint256 bitPosition = inputClaim.batchNumber % 256;
 
+            // console.log("token ", address(token));
+            // console.log("inputTokens[inputClaim.tokenIndex] ", address(inputTokens[inputClaim.tokenIndex]));
+            
             if (token != inputTokens[inputClaim.tokenIndex]) {
                 if (address(token) != address(0)) {
+                    // console.log("now its setting claimed for token!", address(token));
                     if (!_setClaimed(token, amount, wordPosition, bitsSet)) revert AlreadyClaimed();
                 }
 
@@ -105,6 +112,7 @@ contract TheRewarderDistributor {
 
             // for the last claim
             if (i == inputClaims.length - 1) {
+                // console.log("LAST CLAIM REACHER ... so setting claimed for token!", address(token));
                 if (!_setClaimed(token, amount, wordPosition, bitsSet)) revert AlreadyClaimed();
             }
 

