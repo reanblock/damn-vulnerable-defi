@@ -157,6 +157,7 @@ contract FreeRiderChallenge is Test {
 
         attack.attack{value: 0.045 ether}();
 
+        console.log("balance of attack: ", address(attack).balance);
     }
 
     /**

