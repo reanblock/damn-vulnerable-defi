@@ -72,7 +72,7 @@ contract SelfieChallenge is Test {
         );
         // call the exploitSetup function to queue the action (see comments in the functon for details)
         require(exploiter.exploitSetup());
-        // 'wait' two days
+        // 'wait' two days (using vm.warp cheatcode)
         vm.warp(block.timestamp + 2 days);
         // call the exploitCloseup function to execute the action (see comments in the functon for details)
         require(exploiter.exploitCloseup());
