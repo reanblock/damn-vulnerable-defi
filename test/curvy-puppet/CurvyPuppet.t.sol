@@ -52,7 +52,7 @@ contract CurvyPuppetChallenge is Test {
      */
     function setUp() public {
         // Fork from mainnet state at specific block
-        vm.createSelectFork((vm.envString("MAINNET_FORKING_URL")), 20190356);
+        vm.createSelectFork('mainnet', 20190356);
 
         startHoax(deployer);
 

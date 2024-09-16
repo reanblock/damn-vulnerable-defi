@@ -14,3 +14,4 @@ ignored_warnings_from = [
     "src/curvy-puppet/ICryptoSwapPool.sol"
 ]
 bytecode_hash = "none"
+rpc_endpoints = { mainnet = "https://rpc.ankr.com/eth" }

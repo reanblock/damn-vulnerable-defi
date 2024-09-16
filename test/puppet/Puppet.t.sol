@@ -7,6 +7,7 @@ import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 import {PuppetPool} from "../../src/puppet/PuppetPool.sol";
 import {IUniswapV1Exchange} from "../../src/puppet/IUniswapV1Exchange.sol";
 import {IUniswapV1Factory} from "../../src/puppet/IUniswapV1Factory.sol";
+import {PuppetExploit} from "./PuppetExploit.sol";
 
 contract PuppetChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -16,8 +17,8 @@ contract PuppetChallenge is Test {
 
     uint256 constant UNISWAP_INITIAL_TOKEN_RESERVE = 10e18;
     uint256 constant UNISWAP_INITIAL_ETH_RESERVE = 10e18;
-    uint256 constant PLAYER_INITIAL_TOKEN_BALANCE = 1000e18;
-    uint256 constant PLAYER_INITIAL_ETH_BALANCE = 25e18;
+    uint256 constant PLAYER_INITIAL_TOKEN_BALANCE = 1000e18; // 1000 DVT 
+    uint256 constant PLAYER_INITIAL_ETH_BALANCE = 25e18; // 25 ether
     uint256 constant POOL_INITIAL_TOKEN_BALANCE = 100_000e18;
 
     DamnValuableToken token;
@@ -90,9 +91,38 @@ contract PuppetChallenge is Test {
 
     /**
      * CODE YOUR SOLUTION HERE
+     * forge test --mc ^PuppetChallenge -vv
      */
     function test_puppet() public checkSolvedByPlayer {
-        
+        /*
+            The exploit is due to the PuppetPools reliance on Uniswap V1 for price calculations. 
+            Essentially problem lies in the contract’s exclusive dependence on the balance of 
+            the Uniswap pair to determine the token’s price.
+
+            Therefore the DVT tokens can be stolen from the PuppetPool by just 2 simple steps:
+
+            1. Dump DVT Tokens into the UniswapV1 pool to effectively drop the price of DVT in that pool - 
+            therefore PuppetPool contract now perceives DVT as being nearly worthless.
+
+            2. Depoisit a very small ETH Collateral to be able to borrow (steal) all the DVT tokens from the PuppetPool.
+        */
+
+        /* 
+            NOTE: this exploit must be solved by the player with a single transaction call
+            therefore we need to deploy a contract
+        */
+
+        PuppetExploit exploit = new PuppetExploit{value: PLAYER_INITIAL_ETH_BALANCE}(
+            token,
+            lendingPool,
+            uniswapV1Exchange,
+            recovery
+        );
+
+        // transfer in the players entire DVT token balance
+        token.transfer(address(exploit), PLAYER_INITIAL_TOKEN_BALANCE);
+        // execute the attack (see comments in separate contract for details)
+        exploit.attack(POOL_INITIAL_TOKEN_BALANCE);
     }
 
     // Utility function to calculate Uniswap prices

@@ -44,7 +44,7 @@ contract PuppetV3Challenge is Test {
      */
     function setUp() public {
         // Fork from mainnet state at specific block
-        vm.createSelectFork((vm.envString("MAINNET_FORKING_URL")), 15450164);
+        vm.createSelectFork('mainnet', 15450164);
 
         startHoax(deployer);
 
