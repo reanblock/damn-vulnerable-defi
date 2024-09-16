@@ -11,6 +11,7 @@ import {DamnValuableToken} from "../../src/DamnValuableToken.sol";
 import {FreeRiderNFTMarketplace} from "../../src/free-rider/FreeRiderNFTMarketplace.sol";
 import {FreeRiderRecoveryManager} from "../../src/free-rider/FreeRiderRecoveryManager.sol";
 import {DamnValuableNFT} from "../../src/DamnValuableNFT.sol";
+import {FreeRiderAttack} from "./FreeRiderAttack.sol";
 
 contract FreeRiderChallenge is Test {
     address deployer = makeAddr("deployer");
@@ -123,7 +124,39 @@ contract FreeRiderChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_freeRider() public checkSolvedByPlayer {
-        
+        /*
+            Vulnerabilities are:
+
+            1. In buyOne function the funds are sent back to the bayer instead of being sent to the seller. This is
+            because the NFT is transferred to the buyer and THEN the payment is sent to the owner of that NFT (which of course has already 
+            been transfered to the buyer). Therefore the buyer pays 15 ETH for the NFT, is transfered the ownership of tHe NFT and then sent back the 15 ETH.
+
+            2. The next issue is due to the _buyOne function being called in a loop which means the buyer only needs to send the 
+            actaul vaule of 15 ETH to the contract once and the loop will keep useing that as the amount in the msg.vaule variable.
+
+            3. The owner of the NFT needs to approve the the marketplace contract to transfer their NFT before calling offerMany function. However, its possible for
+            the owenr to front run a buyer and revoke the approaval of the NFT preventing the buyer of that NFT.
+
+            The attack strategy is as follows;
+
+            1. Deploy a malicious contract and allocate some ETH to it (for covering the 0.3% fee to the Uniswap Pool later).
+            2. Borrow 15 ETH from the liquidity pool using a UinswapV2 Flash Swap.
+            3. Comvert the received WETH (wrapped ETH) from Uniswap into ETH, making it usable for purchasing the NFTs.
+            4. Exploit the first bug in _buyOne by calling the buyMany function, sending only 15 ETH while attempting to acquire all the NFTs.
+            5. Capitalizing on the second bug, we should receive the ETH back again and all the NFTs.
+            6. Repay the borrowed ETH (becuse the marketplace sent it all back to use), including a 0.3% fee.
+            7. Lastly, we’ll dispatch the tokens to the “Recovery” contract.
+        */
+
+        FreeRiderAttack attack = new FreeRiderAttack(
+            address(uniswapPair), 
+            address(marketplace), 
+            address(weth), 
+            address(nft), 
+            address(recoveryManager));
+
+        attack.attack{value: 0.045 ether}();
+
     }
 
     /**
